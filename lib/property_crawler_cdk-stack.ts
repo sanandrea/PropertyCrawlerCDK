@@ -8,6 +8,8 @@ import * as assets from "aws-cdk-lib/aws-s3-assets";
 import { resolve } from 'path';
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
+import { BillingAlarm } from './constructs/billing_alarm-stack';
+import * as constants from './config/constants'
 
 
 export class PropertyCrawlerCdkStack extends Stack {
@@ -65,6 +67,11 @@ export class PropertyCrawlerCdkStack extends Stack {
       ruleName: 'PropertyCrawlerTrigger',
       schedule: Schedule.cron({ minute: '0', hour: '12' }),
       targets: [lambdaTaskTarget],
-     });
+    });
+
+    new BillingAlarm(this, 'AWSAccountBillingAlarm', {
+      monthlyThreshold: 5,
+      emails: [constants.EMAIL_ADDRESS],
+    });
   }
 }
