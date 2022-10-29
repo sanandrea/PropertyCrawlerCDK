@@ -9,8 +9,11 @@ import { resolve } from 'path';
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { BillingAlarm } from './constructs/billing_alarm-stack';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as constants from './config/constants'
-
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as sub from 'aws-cdk-lib/aws-sns-subscriptions';
+import { LambdaAlarms } from './constructs/lambda_alarms-construct';
 
 export class PropertyCrawlerCdkStack extends Stack {
   public lambdaAsset: assets.Asset;
@@ -38,11 +41,26 @@ export class PropertyCrawlerCdkStack extends Stack {
       encryption: dynamodb.TableEncryption.AWS_MANAGED // Customer managed costs 1$ per month.
     });
 
+    // Index GSI 🗂
+    table.addGlobalSecondaryIndex({
+      indexName: 'titleIndex',
+      partitionKey: {name: 'title', type: dynamodb.AttributeType.STRING},
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // // Reverse GSI 🗂
+    // table.addGlobalSecondaryIndex({
+    //   indexName: 'versionIndex',
+    //   partitionKey: {name: 'sk', type: dynamodb.AttributeType.STRING},
+    //   sortKey: {name: 'pr_id', type: dynamodb.AttributeType.STRING },
+    //   projectionType: dynamodb.ProjectionType.ALL,
+    // });
+
     const crawler = new Function(this, "CrawlerFunction", {
       runtime: Runtime.PYTHON_3_8,
       functionName: 'MainPropertyCrawler',
       memorySize: 1024,
-      timeout: Duration.minutes(3),
+      timeout: Duration.minutes(5),
       role: lambdaRole,
       code: Code.fromBucket(
         this.lambdaAsset.bucket,
@@ -73,5 +91,10 @@ export class PropertyCrawlerCdkStack extends Stack {
       monthlyThreshold: 5,
       emails: [constants.EMAIL_ADDRESS],
     });
+
+    new LambdaAlarms(this, 'PropertyCrawlerLambdaAlarms', {
+      emails: [constants.EMAIL_ADDRESS],
+      lambdaFunctions: [crawler]
+    })
   }
 }
