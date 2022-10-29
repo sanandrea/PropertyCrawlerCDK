@@ -45,15 +45,17 @@ export class PropertyCrawlerCdkStack extends Stack {
     table.addGlobalSecondaryIndex({
       indexName: 'titleIndex',
       partitionKey: {name: 'title', type: dynamodb.AttributeType.STRING},
+      sortKey: {name: 'addedTime', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
     // // Reverse GSI 🗂
     // table.addGlobalSecondaryIndex({
-    //   indexName: 'versionIndex',
+    //   indexName: 'verIndex',
     //   partitionKey: {name: 'sk', type: dynamodb.AttributeType.STRING},
     //   sortKey: {name: 'pr_id', type: dynamodb.AttributeType.STRING },
-    //   projectionType: dynamodb.ProjectionType.ALL,
+    //   projectionType: dynamodb.ProjectionType.INCLUDE,
+    //   nonKeyAttributes: ['title', 'price']
     // });
 
     const crawler = new Function(this, "CrawlerFunction", {
