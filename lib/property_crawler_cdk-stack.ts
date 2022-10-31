@@ -54,10 +54,9 @@ export class PropertyCrawlerCdkStack extends Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-
     const crawler = new Function(this, "CrawlerFunction", {
       runtime: Runtime.PYTHON_3_8,
-      functionName: 'MainPropertyCrawler',
+      functionName: 'PropertyCrawler',
       memorySize: 1024,
       timeout: Duration.minutes(5),
       role: lambdaRole,
@@ -71,19 +70,46 @@ export class PropertyCrawlerCdkStack extends Stack {
       },
     });
 
+    const statusCheckerFunction = new Function(this, "StatusCheckerFunction", {
+      runtime: Runtime.PYTHON_3_8,
+      functionName: 'PropertyStatusChecker',
+      memorySize: 1024,
+      timeout: Duration.minutes(5),
+      role: lambdaRole,
+      code: Code.fromBucket(
+        this.lambdaAsset.bucket,
+        this.lambdaAsset.s3ObjectKey
+        ),
+      handler: 'lambda_handlers.status_checker.lambda_handler',
+      environment: {
+        CRAWLER_TABLE_NAME: table.tableName
+      },
+    });
+
     const dlq = new sqs.Queue(this, 'Queue', {
       queueName: 'CrawlerDLQ'
     });
 
-    const lambdaTaskTarget = new LambdaFunction(crawler, {
+    const lambdaCrawlerTarget = new LambdaFunction(crawler, {
       deadLetterQueue:dlq,
       retryAttempts: 2
     });
 
-    new Rule(this, 'ScheduleRule', {
-      ruleName: 'PropertyCrawlerTrigger',
+    const lambdaCheckerTarget = new LambdaFunction(statusCheckerFunction, {
+      deadLetterQueue:dlq,
+      retryAttempts: 2
+    });
+
+    new Rule(this, 'CrawlerTriggerRule', {
+      ruleName: 'MainCrawlerTrigger',
       schedule: Schedule.cron({ minute: '0', hour: '12' }),
-      targets: [lambdaTaskTarget],
+      targets: [lambdaCrawlerTarget],
+    });
+
+    new Rule(this, 'StatusCheckerRule', {
+      ruleName: 'StatusCheckerTrigger',
+      schedule: Schedule.cron({ minute: '15', hour: '12' }),
+      targets: [lambdaCheckerTarget],
     });
 
     new BillingAlarm(this, 'AWSAccountBillingAlarm', {
@@ -93,7 +119,7 @@ export class PropertyCrawlerCdkStack extends Stack {
 
     new LambdaAlarms(this, 'PropertyCrawlerLambdaAlarms', {
       emails: [constants.EMAIL_ADDRESS],
-      lambdaFunctions: [crawler]
+      lambdaFunctions: [crawler, statusCheckerFunction]
     })
   }
 }

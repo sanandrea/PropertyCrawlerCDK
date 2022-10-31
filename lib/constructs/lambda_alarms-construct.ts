@@ -71,7 +71,7 @@ export class LambdaAlarms extends Construct {
         });
     
         // Lambda Error Alarm 🔔
-        const lambdaErrorAlarm = new cloudwatch.Alarm(this, 'lambda-errors-alarm', {
+        const lambdaErrorAlarm = new cloudwatch.Alarm(this, `${lambdaFunction.node.id}-errors-alarm`, {
             alarmName: `${lambdaFunction.functionName}-error-alarm`,
             metric: functionErrors,
             threshold: 1,
@@ -84,7 +84,7 @@ export class LambdaAlarms extends Construct {
         });
     
         // Lambda Latency Alarm 🔔
-        const lambdaLatencyAlarm = new cloudwatch.Alarm(this, 'lambda-latency-alarm', {
+        const lambdaLatencyAlarm = new cloudwatch.Alarm(this, `${lambdaFunction.node.id}-latency-alarm`, {
             alarmName: `${lambdaFunction.functionName}-latency-alarm`,
             metric: functionDuration,
             threshold: 240000, // in ms = 4 mins = 80% of Lambda timeout
