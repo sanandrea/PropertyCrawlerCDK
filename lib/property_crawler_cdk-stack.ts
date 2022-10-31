@@ -9,10 +9,7 @@ import { resolve } from 'path';
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { BillingAlarm } from './constructs/billing_alarm-stack';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as constants from './config/constants'
-import * as sns from 'aws-cdk-lib/aws-sns';
-import * as sub from 'aws-cdk-lib/aws-sns-subscriptions';
 import { LambdaAlarms } from './constructs/lambda_alarms-construct';
 
 export class PropertyCrawlerCdkStack extends Stack {
@@ -48,15 +45,15 @@ export class PropertyCrawlerCdkStack extends Stack {
       sortKey: {name: 'addedTime', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
     });
+    
+    // Index GSI 🗂
+    table.addGlobalSecondaryIndex({
+      indexName: 'timeAdded',
+      partitionKey: {name: 'sk', type: dynamodb.AttributeType.STRING},
+      sortKey: {name: 'addedTime', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
 
-    // // Reverse GSI 🗂
-    // table.addGlobalSecondaryIndex({
-    //   indexName: 'verIndex',
-    //   partitionKey: {name: 'sk', type: dynamodb.AttributeType.STRING},
-    //   sortKey: {name: 'pr_id', type: dynamodb.AttributeType.STRING },
-    //   projectionType: dynamodb.ProjectionType.INCLUDE,
-    //   nonKeyAttributes: ['title', 'price']
-    // });
 
     const crawler = new Function(this, "CrawlerFunction", {
       runtime: Runtime.PYTHON_3_8,
