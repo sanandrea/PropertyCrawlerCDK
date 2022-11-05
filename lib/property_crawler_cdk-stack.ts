@@ -1,4 +1,4 @@
-import { Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Function, Code, Runtime } from "aws-cdk-lib/aws-lambda";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb"
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -11,6 +11,7 @@ import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets';
 import { BillingAlarm } from './constructs/billing_alarm-stack';
 import * as constants from './config/constants'
 import { LambdaAlarms } from './constructs/lambda_alarms-construct';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 
 export class PropertyCrawlerCdkStack extends Stack {
   public lambdaAsset: assets.Asset;
@@ -54,6 +55,15 @@ export class PropertyCrawlerCdkStack extends Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    const propertyStoreBucket = new s3.Bucket(this, 's3-bucket', {
+      bucketName: 'property-crawler-storage',
+      removalPolicy: RemovalPolicy.RETAIN,
+      versioned: true,
+      publicReadAccess: false,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+    });
+    propertyStoreBucket.grantReadWrite(new iam.AccountRootPrincipal());
+
     const crawler = new Function(this, "CrawlerFunction", {
       runtime: Runtime.PYTHON_3_8,
       functionName: 'PropertyCrawler',
@@ -82,9 +92,11 @@ export class PropertyCrawlerCdkStack extends Stack {
         ),
       handler: 'lambda_handlers.status_checker.lambda_handler',
       environment: {
-        CRAWLER_TABLE_NAME: table.tableName
+        CRAWLER_TABLE_NAME: table.tableName,
+        PROPERTY_BUCKET_NAME: propertyStoreBucket.bucketName
       },
     });
+    propertyStoreBucket.grantReadWrite(statusCheckerFunction);
 
     const dlq = new sqs.Queue(this, 'Queue', {
       queueName: 'CrawlerDLQ'
