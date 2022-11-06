@@ -74,7 +74,7 @@ export class PropertyCrawlerCdkStack extends Stack {
         this.lambdaAsset.bucket,
         this.lambdaAsset.s3ObjectKey
         ),
-      handler: 'lambda_handlers.crawler.lambda_handler',
+      handler: 'dpcie.crawler_handler',
       environment: {
         CRAWLER_TABLE_NAME: table.tableName
       },
@@ -90,7 +90,7 @@ export class PropertyCrawlerCdkStack extends Stack {
         this.lambdaAsset.bucket,
         this.lambdaAsset.s3ObjectKey
         ),
-      handler: 'lambda_handlers.status_checker.lambda_handler',
+      handler: 'dpcie.status_checker_handler',
       environment: {
         CRAWLER_TABLE_NAME: table.tableName,
         PROPERTY_BUCKET_NAME: propertyStoreBucket.bucketName
