@@ -114,13 +114,13 @@ export class PropertyCrawlerCdkStack extends Stack {
 
     new Rule(this, 'CrawlerTriggerRule', {
       ruleName: 'MainCrawlerTrigger',
-      schedule: Schedule.cron({ minute: '0', hour: '12' }),
+      schedule: Schedule.cron({ minute: '0', hour: '00,12' }),
       targets: [lambdaCrawlerTarget],
     });
 
     new Rule(this, 'StatusCheckerRule', {
       ruleName: 'StatusCheckerTrigger',
-      schedule: Schedule.cron({ minute: '15', hour: '12' }),
+      schedule: Schedule.cron({ minute: '15', hour: '00,12' }),
       targets: [lambdaCheckerTarget],
     });
 
